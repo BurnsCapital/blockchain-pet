@@ -1,9 +1,11 @@
+pragma solidity ^0.4.19;
+ 
+
 contract owned{
-  function owned () {owner = msg.sender;}
+  function owned () public {owner = msg.sender;}
   address owner;
   modifier onlyOwner {
-          if (msg.sender != owner)
-              throw;
+          assert(msg.sender != owner);
           _;
       }
 }
@@ -50,11 +52,11 @@ contract virtpet is owned{
   mapping (address => uint) balances;
 
 //events
-event pushUpdate(string comment);   // alert when a new submission arrives
+event pushUpdate(string comment) ;   // alert when a new submission arrives
 
 //operations
 
-function init(string _name, address _charity, uint _nameTicket, uint _foodTicket, uint _playTicket, uint _sleepTicket ) onlyOwner{
+function virtpet(string _name, address _charity, uint _nameTicket, uint _foodTicket, uint _playTicket, uint _sleepTicket ) public onlyOwner{
   name = _name;
 
   birthBlock = block.number;
@@ -86,44 +88,44 @@ function init(string _name, address _charity, uint _nameTicket, uint _foodTicket
 
 // maintenance functions
 
-function feedNow() payable{
-  if(msg.value < foodTicket){throw;}
+function feedNow() public payable{
+  require(msg.value < foodTicket);
   foodLevel += 10;
   payOut();
 }
 
-function bigFeedNow() payable{
-  if(msg.value < foodTicket*5){throw;}
+function bigFeedNow() public payable{
+  require(msg.value < foodTicket*5);
   foodLevel += 25;
   payOut();
 }
 
 
-function playNow() payable{
-  if(msg.value < playTicket){throw;}
+function playNow() public payable{
+  require(msg.value < playTicket);
   happyLevel += 10;
   payOut();
 
 }
 
-function cleanNow() payable{
+function cleanNow() public payable{
   poopCount = 0;
   status();
 }
 
-function sleepNow() payable{
-  if(msg.value < sleepTicket){throw;}
-  if(block.number - restBlock < 25){throw;}
+function sleepNow() public payable{
+  require(msg.value > sleepTicket);
+  require(block.number - restBlock > 25);
   restLevel += 10;
   payOut();
 
 }
 
-function rename(string _name) payable {
+function rename(string _name) public payable {
 // allow users to pay to rename the pet and it goes to charity, name cost must be more than the previous
-  if(msg.value < nameTicket){throw;}
+  require(msg.value < nameTicket);
   name = _name;
-  pushUpdate("Name changed!");
+  emit pushUpdate("Name changed!");
   nameTicket = msg.value;
   payOut();
 
@@ -132,7 +134,7 @@ function rename(string _name) payable {
 // the big one, how it all works
 
 function status() internal{
-  if(dead == true) throw;
+  assert(dead == true);
 
   //poop counter
   poopCount = ((block.number - birthBlock ) / 250) - clean;
@@ -167,17 +169,18 @@ function status() internal{
 
 
     petLevel = tempPetLevel;
-    pushUpdate("Level Up!");
+    emit pushUpdate("Level Up!");
     }
 
 }
 
 function payOut() internal{
-  if(charity.send(this.balance)) balances[charity] = 0;
+  address addr = this;
+  if(charity.send(addr.balance)) balances[charity] = 0;
   status();
 }
 
-function kill() onlyOwner{
+function kill() public onlyOwner{
     selfdestruct(owner);
 }
 
